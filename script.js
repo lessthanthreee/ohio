@@ -179,4 +179,153 @@ document.addEventListener('DOMContentLoaded', () => {
             button.style.setProperty('--y', `${y}px`);
         });
     });
+
+    // Particle animation
+    const canvas = document.getElementById('particles');
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas size
+    function setCanvasSize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    setCanvasSize();
+    window.addEventListener('resize', setCanvasSize);
+
+    // Mouse position
+    let mouse = {
+        x: null,
+        y: null,
+        radius: 150
+    }
+
+    window.addEventListener('mousemove', function(event) {
+        mouse.x = event.x;
+        mouse.y = event.y;
+    });
+
+    // Particle class
+    class Particle {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.baseX = x;
+            this.baseY = y;
+            this.size = Math.random() * 3 + 1;
+            this.density = Math.random() * 30 + 1;
+            this.color = this.getRandomColor();
+        }
+
+        getRandomColor() {
+            const colors = [
+                'rgba(45, 93, 123, 0.8)',  // secondary color
+                'rgba(214, 64, 69, 0.8)',  // accent color
+                'rgba(26, 31, 60, 0.8)'    // primary color
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+        }
+
+        update() {
+            // Distance between mouse and particle
+            let dx = mouse.x - this.x;
+            let dy = mouse.y - this.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+
+            let forceDirectionX = dx / distance;
+            let forceDirectionY = dy / distance;
+
+            // Max distance, past that the force will be 0
+            const maxDistance = 150;
+            let force = (maxDistance - distance) / maxDistance;
+
+            // If we're too far away, no force is applied
+            if (force < 0) force = 0;
+
+            let directionX = (forceDirectionX * force * this.density);
+            let directionY = (forceDirectionY * force * this.density);
+
+            if (distance < maxDistance) {
+                this.x -= directionX;
+                this.y -= directionY;
+            } else {
+                if (this.x !== this.baseX) {
+                    let dx = this.x - this.baseX;
+                    this.x -= dx/10;
+                }
+                if (this.y !== this.baseY) {
+                    let dy = this.y - this.baseY;
+                    this.y -= dy/10;
+                }
+            }
+        }
+    }
+
+    // Create particle array
+    let particleArray = [];
+    function init() {
+        particleArray = [];
+        let numberOfParticles = (canvas.width * canvas.height) / 9000;
+        for (let i = 0; i < numberOfParticles; i++) {
+            let x = Math.random() * canvas.width;
+            let y = Math.random() * canvas.height;
+            particleArray.push(new Particle(x, y));
+        }
+    }
+
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let i = 0; i < particleArray.length; i++) {
+            particleArray[i].update();
+            particleArray[i].draw();
+        }
+        connect();
+    }
+
+    // Connect nearby particles with lines
+    function connect() {
+        let opacityValue = 1;
+        for (let a = 0; a < particleArray.length; a++) {
+            for (let b = a; b < particleArray.length; b++) {
+                let dx = particleArray[a].x - particleArray[b].x;
+                let dy = particleArray[a].y - particleArray[b].y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 100) {
+                    opacityValue = 1 - (distance/100);
+                    ctx.strokeStyle = `rgba(230, 241, 255, ${opacityValue * 0.2})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(particleArray[a].x, particleArray[a].y);
+                    ctx.lineTo(particleArray[b].x, particleArray[b].y);
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        setCanvasSize();
+        init();
+    });
+
+    // Initialize and start animation
+    init();
+    animate();
+
+    // Reset mouse position when mouse leaves window
+    window.addEventListener('mouseout', function() {
+        mouse.x = undefined;
+        mouse.y = undefined;
+    });
 });
